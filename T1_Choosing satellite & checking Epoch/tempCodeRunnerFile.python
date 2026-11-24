@@ -1,0 +1,96 @@
+import csv
+import math
+from datetime import datetime, timedelta, timezone
+
+
+TLE_FILE = "selected_satellites.tle"
+OUTPUT_CSV = "satellite_catalog.csv"
+SOURCE_URL = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"
+DOWNLOADED_UTC = "2026-11-24 10:33:00 UTC"
+
+
+SATNOGS_CANDIDATE_IDS = {25544, 48274, 41914, 44538, 25994, 43798, 43013, 26958}
+
+
+def compute_checksum(line: str) -> int:
+    total = 0
+    for ch in line[:68]:
+        if ch.isdigit():
+            total += int(ch)
+        elif ch == "-":
+            total += 1
+    return total % 10
+
+
+def parse_epoch(line1: str) -> datetime:
+    ep = line1[18:32].strip()
+    yy = int(ep[:2])
+    year = 2000 + yy if yy < 57 else 1900 + yy
+    day_of_year = float(ep[2:])
+    return datetime(year, 1, 1, tzinfo=timezone.utc) + timedelta(days=day_of_year - 1.0)
+
+
+def classify_orbit(mean_motion_rev_day: float) -> tuple[str, float]:
+    mu = 398600.4418
+    re = 6378.137
+    omega = mean_motion_rev_day * 2.0 * math.pi / 86400.0
+    a = (mu / (omega**2)) ** (1.0 / 3.0)
+    alt = a - re
+    if alt < 450:
+        return "VLEO", alt
+    elif alt < 2000:
+        return "LEO", alt
+    elif alt < 35000:
+        return "MEO", alt
+    return "GEO", alt
+
+
+with open(TLE_FILE, "r", encoding="utf-8") as f:
+    lines = [line.rstrip("\r\n") for line in f if line.strip()]
+
+catalog_rows = []
+for i in range(0, len(lines), 3):
+    name, l1, l2 = lines[i].strip(), lines[i + 1], lines[i + 2]
+
+    norad1 = l1[2:7].strip()
+    norad2 = l2[2:7].strip()
+    norad_match = (norad1 == norad2) and norad1.isdigit()
+
+    cs1_ok = (len(l1) == 69) and (compute_checksum(l1) == int(l1[68]))
+    cs2_ok = (len(l2) == 69) and (compute_checksum(l2) == int(l2[68]))
+
+    epoch_dt = parse_epoch(l1)
+    inc = float(l2[8:16])
+    ecc = float("0." + l2[26:33].strip())
+    mean_motion = float(l2[52:63])
+    regime, mean_alt = classify_orbit(mean_motion)
+    norad_int = int(norad1)
+
+    catalog_rows.append({
+        "norad_id": norad_int,
+        "name": name,
+        "orbit_regime": regime,
+        "epoch_utc": epoch_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "norad_match": norad_match,
+        "checksum_line1_ok": cs1_ok,
+        "checksum_line2_ok": cs2_ok,
+        "mean_alt_km": round(mean_alt, 1),
+        "inclination_deg": round(inc, 4),
+        "eccentricity": round(ecc, 7),
+        "mean_motion_rev_day": round(mean_motion, 8),
+        "satnogs_candidate": norad_int in SATNOGS_CANDIDATE_IDS,
+        "source_url": SOURCE_URL,
+        "downloaded_utc": DOWNLOADED_UTC,
+    })
+
+# Export file satellite_catalog.csv
+with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
+    writer = csv.DictWriter(f, fieldnames=catalog_rows[0].keys())
+    writer.writeheader()
+    writer.writerows(catalog_rows)
+
+
+print(f"Completely checked {len(catalog_rows)} satellite -> Successfully exported {OUTPUT_CSV}\n")
+for r in catalog_rows:
+    status = "OK" if (r["norad_match"] and r["checksum_line1_ok"] and r["checksum_line2_ok"]) else "ERROR"
+    print(f"{r['norad_id']} | {r['name']:<20} | {r['orbit_regime']:<4} | Epoch: {r['epoch_utc']} | Check: {status}")

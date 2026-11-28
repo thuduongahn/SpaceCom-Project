@@ -7,7 +7,7 @@ Acquire, validate, and classify current Two-Line Element (TLE) orbital data for 
 ## 2. Data Sources & Provenance
 - **Primary TLE Source:** CelesTrak GP Data API (`https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle` or individual `CATNR` queries).
 - **Validation Reference:** SatNOGS DB & Network (`https://db.satnogs.org/` and `https://network.satnogs.org/api/observations/`).
-- **Acquisition Timestamp:** `2026-11-24 10:33:00 UTC` *(update if re-downloaded)*.
+- **Acquisition Timestamp:** `2026-11-28 09:30:00 UTC` *(update if re-downloaded)*.
 
 ## 3. Data Acquisition & Processing Pipeline
 1. **Raw Data Acquisition:** Download 3-line TLE sets (Name, Line 1, Line 2) directly from CelesTrak and preserve the original raw TLE file unmodified.

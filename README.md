@@ -1,5 +1,5 @@
 # SpaceCom-Project
-# Task 1 (Member A) — Current TLE Acquisition & Satellite Catalog
+# Task 1 - Current TLE Acquisition & Satellite Catalog
 
 ## 1. Objective
 Acquire, validate, and classify current Two-Line Element (TLE) orbital data for **20 satellites** evenly distributed across four orbital regimes (**5 VLEO, 5 LEO, 5 MEO, and 5 GEO**). All selected GEO satellites are verified to maintain an elevation angle $> 10^\circ$ from the International University (IU) ground station ($10.88^\circ\text{N}, 106.80^\circ\text{E}$), and suitable VLEO/LEO candidates are flagged for downstream SatNOGS validation.
